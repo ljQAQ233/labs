@@ -11,4 +11,7 @@ static.out: ../static.c
 asm.out: ../asm.S
 	$(CC) $< -o $@ -static -nostdlib -ffreestanding
 
+asm-pie.out: ../asm.S
+	$(CC) $< -o $@ -static-pie -nostdlib -ffreestanding
+
 .PHONY:all
