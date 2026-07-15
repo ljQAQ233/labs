@@ -3,7 +3,7 @@
 _start:
   movq $1, %rax
   movq $1, %rdi
-  movq $msg, %rsi
+  leaq msg(%rip), %rsi
   movq $len, %rdx
   syscall
 
