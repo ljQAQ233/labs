@@ -162,10 +162,30 @@ int main(int argc, char *argv[]) {
       printf("  map handled overlapped\n");
     void *area = mmap(exp, fsize, prot, MAP_PRIVATE | MAP_FIXED, fd, foff);
     assert(area == exp);
+
+    if (prot & PROT_WRITE) {
+      if (msize > fsize) {
+        // create remained mapping for zero-padded pages
+        size_t exsize = msize - fsize;
+        void *expages = mmap(exp + fsize, exsize, prot,
+                             MAP_PRIVATE | MAP_FIXED | MAP_ANON, -1, 0);
+        assert(expages != MAP_FAILED);
+      }
+      // clear bss
+      void *bss = virt + phdr->p_vaddr + phdr->p_filesz;
+      size_t bss_size = virt + mend - bss;
+      printf("  clearing bss %p - %p\n", bss, bss + bss_size);
+      memset(bss, 0, bss_size);
+    }
   }
   void *start = virt + ehdr->e_entry;
   void *sp = build_frame(argv + 1, environ, (long[]){AT_NULL});
-  printf("start is at %p\n", start);
-  asm volatile("jmp *%0\n" ::"r"(start) : "memory");
+  printf("start is at %p, sp = %p\n", start, sp);
+  asm volatile( //
+      "mov %1, %%rsp\n"
+      "xor %%rdx, %%rdx\n"
+      "jmp *%0\n" ::"r"(start),
+      "r"(sp)
+      : "memory");
   __builtin_unreachable();
 }
