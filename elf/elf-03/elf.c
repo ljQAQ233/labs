@@ -236,8 +236,7 @@ int main(int argc, char *argv[]) {
 
       if (!(prev_prot & PROT_WRITE))
         mprotect(cast(void *, prev_mend), overlapped, prev_prot | PROT_WRITE);
-      lseek(fd, phdr->p_offset, SEEK_SET);
-      read(fd, virt + phdr->p_vaddr, readsz);
+      memcpy(virt + phdr->p_vaddr, base + phdr->p_offset, readsz);
       if (!(prev_prot & PROT_WRITE) && !(phdr->p_flags & PF_W))
         mprotect(cast(void *, prev_mend), overlapped, prev_prot);
       is_overlapped = 1;
@@ -296,6 +295,8 @@ int main(int argc, char *argv[]) {
   long *auxv = auxdup(auxv_ov);
   void *sp = build_frame(argv + 1, environ, auxv);
   printf("start is at %p, sp = %p\n", start, sp);
+
+  munmap(base, len);
   fflush(stdout);
   asm volatile( //
       "mov %1, %%rsp\n"
