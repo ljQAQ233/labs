@@ -25,6 +25,14 @@ asm("  .text\n"
     "  movq %rsp, initial_sp(%rip)\n"
     "  jmp _start\n");
 
+int aux_is_vector(long key, long val) {
+  if (key == AT_RANDOM)
+    return 16;
+  if (key == AT_PLATFORM || key == AT_BASE_PLATFORM || key == AT_EXECFN)
+    return val ? strlen(cast(char *, val)) + 1 : 0;
+  return -1;
+}
+
 void *build_frame(char *argv[], char *envp[], long *auxv) {
   static char frame[1 << 14];
   void *sp = cast(void *, frame + sizeof(frame));
@@ -34,6 +42,20 @@ void *build_frame(char *argv[], char *envp[], long *auxv) {
     argc++;
   while (envp && envp[envc])
     envc++;
+
+  int naux = 0;
+  if (auxv) {
+    while (auxv[naux] != AT_NULL) {
+      int vecsz = aux_is_vector(auxv[naux], auxv[naux + 1]);
+      if (vecsz >= 0) {
+        sp -= vecsz;
+        memcpy(sp, cast(void *, auxv[naux + 1]), vecsz);
+        auxv[naux + 1] = cast(unsigned long, sp);
+      }
+      naux += 2;
+    }
+    naux += 2;
+  }
 
   unsigned long argv_addr[argc], envp_addr[envc];
   for (int i = envc - 1; i >= 0; i--) {
@@ -52,12 +74,6 @@ void *build_frame(char *argv[], char *envp[], long *auxv) {
   if (!((envc + argc) & 1))
     sp -= N;
 
-  int naux = 0;
-  if (auxv) {
-    while (auxv[naux] != AT_NULL)
-      naux += 2;
-    naux += 2;
-  }
   sp -= naux * N;
   memcpy(sp, auxv, (naux - 2) * N);
   cast(long *, sp)[naux - 2] = AT_NULL;
