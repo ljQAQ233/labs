@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <malloc.h>
 #include <elf.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -31,6 +32,22 @@ int aux_is_vector(long key, long val) {
   if (key == AT_PLATFORM || key == AT_BASE_PLATFORM || key == AT_EXECFN)
     return val ? strlen(cast(char *, val)) + 1 : 0;
   return -1;
+}
+
+int aux_is_overlay(long key) {
+  switch (key) {
+  case AT_PHDR:
+  case AT_PHENT:
+  case AT_PHNUM:
+  case AT_FLAGS:
+  case AT_BASE:
+  case AT_ENTRY:
+  case AT_NOTELF:
+  case AT_EXECFN:
+    return 1;
+  default:
+    return 0;
+  }
 }
 
 void *build_frame(char *argv[], char *envp[], long *auxv) {
@@ -105,6 +122,26 @@ unsigned long auxval(unsigned long type, unsigned long *val) {
       return 0;
     }
   return -1;
+}
+
+void *auxdup(long overlay[]) {
+  int naux = 0;
+  long *oauxv = initial_auxv;
+  while (oauxv[naux] != AT_NULL)
+    naux += 2;
+  naux += 2;
+
+  oauxv = initial_auxv;
+  long *auxv = malloc(naux * N);
+  for (int i = 0; i < naux; i += 2) {
+    int k = oauxv[i];
+    auxv[i] = k;
+    if (aux_is_overlay(k))
+      auxv[i + 1] = overlay[k];
+    else
+      auxv[i + 1] = oauxv[i + 1];
+  }
+  return auxv;
 }
 
 int main(int argc, char *argv[]) {
@@ -226,30 +263,20 @@ int main(int argc, char *argv[]) {
     }
   }
   void *start = virt + ehdr->e_entry;
-  // getauxval to get always-passed-in auxv members, for more of those
-  // members - SEE linux kernel source tree : fs/binfmt_elf.c
-  long auxv[] = {
-      AT_PHDR,   cast(long, phdrs),
-      AT_PHENT,  ehdr->e_phentsize,
-      AT_PHNUM,  ehdr->e_phnum,
-      AT_FLAGS,  0,
-      AT_BASE,   cast(long, virt),
-      AT_ENTRY,  cast(long, start),
-      AT_NOTELF, 0,
-      AT_PAGESZ, getauxval(AT_PAGESZ),
-      AT_UID,    getauxval(AT_UID), //
-      AT_EUID,   getauxval(AT_EUID),
-      AT_GID,    getauxval(AT_GID),
-      AT_EGID,   getauxval(AT_EGID),
-      AT_CLKTCK, getauxval(AT_CLKTCK),
-      AT_SECURE, getauxval(AT_SECURE),
-      AT_RANDOM, getauxval(AT_RANDOM),
-      AT_HWCAP, getauxval(AT_HWCAP),
-      AT_EXECFN, cast(long, argv[1]),
-      AT_NULL,   0,
+  long auxv_ov[] = {
+      [AT_PHDR] = cast(long, phdrs),
+      [AT_PHENT] = ehdr->e_phentsize,
+      [AT_PHNUM] = ehdr->e_phnum,
+      [AT_FLAGS] = 0,
+      [AT_BASE] = cast(long, virt),
+      [AT_ENTRY] = cast(long, start),
+      [AT_NOTELF] = 0,
+      [AT_EXECFN] = cast(long, argv[1]),
   };
+  long *auxv = auxdup(auxv_ov);
   void *sp = build_frame(argv + 1, environ, auxv);
   printf("start is at %p, sp = %p\n", start, sp);
+  fflush(stdout);
   asm volatile( //
       "mov %1, %%rsp\n"
       "xor %%rdx, %%rdx\n"
