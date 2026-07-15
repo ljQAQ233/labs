@@ -1,8 +1,8 @@
 #include <assert.h>
-#include <string.h>
 #include <elf.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -38,13 +38,23 @@ int main(int argc, char *argv[]) {
       prot |= PROT_WRITE;
     if (phdr->p_flags & PF_X)
       prot |= PROT_EXEC;
-    size_t sz = align_up(phdr->p_memsz, sz);
-    size_t bss_sz = sz - phdr->p_filesz;
-    void *exp = cast(void *, phdr->p_vaddr);
-    printf("  map %#zx -> %p, sz = %#zx, bss_sz = %#zx, align = %#zx\n",
-           phdr->p_offset, exp, sz, bss_sz, phdr->p_align);
+    size_t A = phdr->p_align;
+    size_t foff = align_dn(phdr->p_offset, A);
+    size_t fend = align_up(phdr->p_offset + phdr->p_filesz, A);
+    size_t fsize = fend - foff;
+    size_t moff = align_dn(phdr->p_vaddr, A);
+    size_t mend = align_up(phdr->p_vaddr + phdr->p_memsz, A);
+    size_t msize = mend - moff;
+
+    void *exp = cast(void *, moff);
+    printf("  map %#zx -> %p, sz = %#zx, msz = %#zx\n", foff, exp, fsize,
+           msize);
+    void *area = mmap(exp, fsize, prot, MAP_PRIVATE | MAP_FIXED, fd, foff);
+
+    assert(area == exp);
   }
   void *start = cast(void *, ehdr->e_entry);
 
+  // build frame as per elf standard
   return 0;
 }
