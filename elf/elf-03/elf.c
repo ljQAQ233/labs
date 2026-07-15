@@ -15,6 +15,16 @@ extern char **environ;
 
 #define N sizeof(long)
 
+void *initial_sp;
+long *initial_auxv;
+
+// do hijack
+asm("  .text\n"
+    "  .globl mystart\n"
+    "mystart:\n"
+    "  movq %rsp, initial_sp(%rip)\n"
+    "  jmp _start\n");
+
 void *build_frame(char *argv[], char *envp[], long *auxv) {
   static char frame[1 << 14];
   void *sp = cast(void *, frame + sizeof(frame));
@@ -72,6 +82,16 @@ void *build_frame(char *argv[], char *envp[], long *auxv) {
 }
 
 int main(int argc, char *argv[]) {
+  printf("initial_sp = %p\n", initial_sp);
+  printf("  argc = %ld\n", *cast(long *, initial_sp));
+  printf("  prog = %s\n", *cast(char **, cast(long *, initial_sp) + 1));
+  {
+    initial_auxv = cast(long *, initial_sp);
+    initial_auxv += 1 + argc + 1; // jmp to envp
+    while (*initial_auxv++)
+      ;
+  }
+
   assert(argc >= 2);
   int fd = open(argv[1], O_RDONLY);
   assert(fd > 0);

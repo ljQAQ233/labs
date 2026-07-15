@@ -1,9 +1,15 @@
 CC = gcc
 
+ifeq ($(notdir $(CURDIR)),elf-03)
+ENTRY_FLAG = -Wl,-e,mystart
+else
+ENTRY_FLAG =
+endif
+
 all: elf.out static.out asm.out
 
 elf.out: elf.c
-	$(CC) $< -o $@ -static -Wl,-Ttext-segment=0x10000000
+	$(CC) $< -o $@ -static -Wl,-Ttext-segment=0x10000000 $(ENTRY_FLAG)
 
 static.out: ../static.c
 	$(CC) $< -o $@ -static
