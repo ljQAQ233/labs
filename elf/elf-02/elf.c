@@ -24,10 +24,23 @@ int main(int argc, char *argv[]) {
   assert(ehdr->e_ident[1] == ELFMAG1);
   assert(ehdr->e_ident[2] == ELFMAG2);
   assert(ehdr->e_ident[3] == ELFMAG3);
-  assert(ehdr->e_type == ET_EXEC);
+  assert(ehdr->e_type == ET_EXEC || ehdr->e_type == ET_DYN);
   assert(ehdr->e_machine == EM_X86_64);
 
+  intptr_t lp_max = 0;
+  intptr_t lp_min = -1;
   void *phdrs = cast(Elf64_Phdr *, base + ehdr->e_phoff);
+  for (int i = 0; i < ehdr->e_phnum; i++) {
+    Elf64_Phdr *phdr = cast(Elf64_Phdr *, phdrs + i * ehdr->e_phentsize);
+    if (phdr->p_type == PT_LOAD) {
+      uintptr_t dptr = align_dn(phdr->p_vaddr, phdr->p_align);
+      uintptr_t uptr = align_up(phdr->p_vaddr + phdr->p_memsz, phdr->p_align);
+      if (dptr < lp_min)
+        lp_min = dptr;
+      if (uptr > lp_max)
+        lp_max = uptr;
+    }
+  }
   int is_overlapped = 0;
   size_t prev_mend = 0;
   size_t prev_prot = 0;
