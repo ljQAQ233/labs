@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/auxv.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -179,7 +180,24 @@ int main(int argc, char *argv[]) {
     }
   }
   void *start = virt + ehdr->e_entry;
-  void *sp = build_frame(argv + 1, environ, (long[]){AT_NULL});
+  long auxv[] = {
+      AT_PHDR,   cast(long, phdrs),
+      AT_PHENT,  ehdr->e_phentsize,
+      AT_PHNUM,  ehdr->e_phnum,
+      AT_PAGESZ, getauxval(AT_PAGESZ),
+      AT_BASE,   cast(long, virt),
+      AT_ENTRY,  cast(long, start),
+      AT_NOTELF, 0,
+      AT_UID,    getauxval(AT_UID), //
+      AT_EUID,   getauxval(AT_EUID),
+      AT_GID,    getauxval(AT_GID),
+      AT_EGID,   getauxval(AT_EGID),
+      AT_CLKTCK, getauxval(AT_CLKTCK),
+      AT_RANDOM, getauxval(AT_RANDOM),
+      AT_EXECFN, cast(long, argv[1]),
+      AT_NULL,   0,
+  };
+  void *sp = build_frame(argv + 1, environ, auxv);
   printf("start is at %p, sp = %p\n", start, sp);
   asm volatile( //
       "mov %1, %%rsp\n"
