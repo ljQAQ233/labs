@@ -71,7 +71,7 @@ void *build_frame(char *argv[], char *envp[], long *auxv) {
 }
 
 int main(int argc, char *argv[]) {
-  assert(argc == 2);
+  assert(argc >= 2);
   int fd = open(argv[1], O_RDONLY);
   assert(fd > 0);
 
