@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
     prev_mend = mend;
     prev_prot = prot;
 
-    void *exp = cast(void *, moff);
+    void *exp = virt + moff;
     printf("  map %#zx -> %p, sz = %#zx, msz = %#zx\n", foff, exp, fsize,
            msize);
     if (is_overlapped)
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
     void *area = mmap(exp, fsize, prot, MAP_PRIVATE | MAP_FIXED, fd, foff);
     assert(area == exp);
   }
-  void *start = cast(void *, ehdr->e_entry);
+  void *start = virt + ehdr->e_entry;
   printf("start is at %p\n", start);
   asm volatile("jmp *%0\n" ::"r"(start) : "memory");
   __builtin_unreachable();
