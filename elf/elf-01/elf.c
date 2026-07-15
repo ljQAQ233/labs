@@ -11,7 +11,8 @@
 #define align_dn(x, y) ((y) * (x / y))
 
 int main(int argc, char *argv[]) {
-  int fd = open("static.out", O_RDONLY);
+  assert(argc == 2);
+  int fd = open(argv[1], O_RDONLY);
   assert(fd > 0);
 
   size_t len = lseek(fd, 0, SEEK_END);
