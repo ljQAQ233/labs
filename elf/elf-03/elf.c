@@ -81,6 +81,16 @@ void *build_frame(char *argv[], char *envp[], long *auxv) {
   return sp;
 }
 
+unsigned long auxval(unsigned long type, unsigned long *val) {
+  const unsigned long *aux = (void *)initial_auxv;
+  for (; aux[0]; aux += 2)
+    if (aux[0] == type) {
+      *val = aux[1];
+      return 0;
+    }
+  return -1;
+}
+
 int main(int argc, char *argv[]) {
   printf("initial_sp = %p\n", initial_sp);
   printf("  argc = %ld\n", *cast(long *, initial_sp));
