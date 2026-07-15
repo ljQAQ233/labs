@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
   void *phdrs = cast(Elf64_Phdr *, base + ehdr->e_phoff);
   int is_overlapped = 0;
   size_t prev_mend = 0;
+  size_t prev_prot = 0;
   for (int i = 0; i < ehdr->e_phnum; i++) {
     Elf64_Phdr *phdr = cast(Elf64_Phdr *, phdrs + i * ehdr->e_phentsize);
     if (phdr->p_type != PT_LOAD)
@@ -59,13 +60,18 @@ int main(int argc, char *argv[]) {
         readsz = phdr->p_filesz;
       assert(readsz > 0 && readoff > 0); // I'm sure
 
+      if (!(prev_prot & PROT_WRITE))
+        mprotect(cast(void *, prev_mend), overlapped, prev_prot | PROT_WRITE);
       lseek(fd, phdr->p_offset, SEEK_SET);
       read(fd, cast(void *, phdr->p_vaddr), readsz);
+      if (!(prev_prot & PROT_WRITE) && !(phdr->p_flags & PF_W))
+        mprotect(cast(void *, prev_mend), overlapped, prev_prot);
       is_overlapped = 1;
     } else {
       is_overlapped = 0;
     }
     prev_mend = mend;
+    prev_prot = prot;
 
     void *exp = cast(void *, moff);
     printf("  map %#zx -> %p, sz = %#zx, msz = %#zx\n", foff, exp, fsize,
