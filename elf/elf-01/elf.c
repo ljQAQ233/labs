@@ -25,5 +25,26 @@ int main(int argc, char *argv[]) {
   assert(ehdr->e_ident[3] == ELFMAG3);
   assert(ehdr->e_type == ET_EXEC);
   assert(ehdr->e_machine == EM_X86_64);
+
+  void *phdrs = cast(Elf64_Phdr *, base + ehdr->e_phoff);
+  for (int i = 0; i < ehdr->e_phnum; i++) {
+    Elf64_Phdr *phdr = cast(Elf64_Phdr *, phdrs + i * ehdr->e_phentsize);
+    if (phdr->p_type != PT_LOAD)
+      continue;
+    int prot = 0;
+    if (phdr->p_flags & PF_R)
+      prot |= PROT_READ;
+    if (phdr->p_flags & PF_W)
+      prot |= PROT_WRITE;
+    if (phdr->p_flags & PF_X)
+      prot |= PROT_EXEC;
+    size_t sz = align_up(phdr->p_memsz, sz);
+    size_t bss_sz = sz - phdr->p_filesz;
+    void *exp = cast(void *, phdr->p_vaddr);
+    printf("  map %#zx -> %p, sz = %#zx, bss_sz = %#zx, align = %#zx\n",
+           phdr->p_offset, exp, sz, bss_sz, phdr->p_align);
+  }
+  void *start = cast(void *, ehdr->e_entry);
+
   return 0;
 }
