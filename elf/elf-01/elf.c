@@ -55,7 +55,11 @@ int main(int argc, char *argv[]) {
     assert(area == exp);
   }
   void *start = cast(void *, ehdr->e_entry);
-
-  // build frame as per elf standard
-  return 0;
+  printf("start is at %p\n", start);
+  asm volatile(
+      "jmp *%0\n"
+      ::"r"(start)
+      : "memory"
+  );
+  __builtin_unreachable();
 }
