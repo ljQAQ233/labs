@@ -20,4 +20,7 @@ asm.out: ../asm.S
 asm-pie.out: ../asm.S
 	$(CC) $< -o $@ -static-pie -nostdlib -ffreestanding
 
-.PHONY:all
+clean:
+	rm *.out
+
+.PHONY:all clean
