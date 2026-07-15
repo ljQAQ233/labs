@@ -6,6 +6,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+extern char **environ;
+
 #define cast(t, p) ((t)(p))
 #define align_up(x, a) (((x) + (a) - 1) & ~((a) - 1))
 #define align_dn(x, y) ((y) * (x / y))
@@ -162,6 +164,7 @@ int main(int argc, char *argv[]) {
     assert(area == exp);
   }
   void *start = virt + ehdr->e_entry;
+  void *sp = build_frame(argv + 1, environ, (long[]){AT_NULL});
   printf("start is at %p\n", start);
   asm volatile("jmp *%0\n" ::"r"(start) : "memory");
   __builtin_unreachable();
