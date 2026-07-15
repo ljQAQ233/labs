@@ -10,6 +10,7 @@
 
 extern char **environ;
 
+#define PAGE_SIZE sysconf(_SC_PAGESIZE)
 #define cast(t, p) ((t)(p))
 #define align_up(x, a) (((x) + (a) - 1) & ~((a) - 1))
 #define align_dn(x, y) ((y) * (x / y))
@@ -197,10 +198,17 @@ int main(int argc, char *argv[]) {
   int is_overlapped = 0;
   size_t prev_mend = 0;
   size_t prev_prot = 0;
+  void *pmapself = 0;
   for (int i = 0; i < ehdr->e_phnum; i++) {
     Elf64_Phdr *phdr = cast(Elf64_Phdr *, phdrs + i * ehdr->e_phentsize);
     if (phdr->p_type != PT_LOAD)
       continue;
+    // the phdr includes phdr itself, set pmapself
+    if (phdr->p_offset <= ehdr->e_phoff &&
+        phdr->p_offset + phdr->p_filesz >=
+            ehdr->e_phoff + ehdr->e_phentsize * ehdr->e_phnum)
+      pmapself = virt + phdr->p_vaddr              // va
+                 + ehdr->e_phoff - phdr->p_offset; // distance to seg start
     int prot = 0;
     if (phdr->p_flags & PF_R)
       prot |= PROT_READ;
@@ -262,9 +270,21 @@ int main(int argc, char *argv[]) {
       memset(bss, 0, bss_size);
     }
   }
+
+  if (pmapself == 0) {
+    size_t off = align_dn(ehdr->e_phoff, PAGE_SIZE);
+    size_t end = align_up(off + ehdr->e_phentsize * ehdr->e_phnum, PAGE_SIZE);
+    size_t sz = end - off;
+    pmapself = mmap(NULL, sz, PROT_READ, MAP_PRIVATE, fd, off);
+    assert(!pmapself);
+    printf("external AT_PHDR used = %p\n", pmapself);
+  } else {
+    printf("internal AT_PHDR used = %p\n", pmapself);
+  }
+
   void *start = virt + ehdr->e_entry;
   long auxv_ov[] = {
-      [AT_PHDR] = cast(long, phdrs),
+      [AT_PHDR] = cast(long, pmapself),
       [AT_PHENT] = ehdr->e_phentsize,
       [AT_PHNUM] = ehdr->e_phnum,
       [AT_FLAGS] = 0,
