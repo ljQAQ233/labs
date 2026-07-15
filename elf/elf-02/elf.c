@@ -40,7 +40,16 @@ int main(int argc, char *argv[]) {
       if (uptr > lp_max)
         lp_max = uptr;
     }
+    if (phdr->p_type == PT_INTERP)
+      assert(!"ldso not supported!!!");
   }
+  void *virt = 0;
+  uintptr_t lp_size = lp_max - lp_min;
+  if (ehdr->e_type == ET_DYN) {
+    virt = mmap(NULL, lp_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+    assert(virt != MAP_FAILED);
+  }
+
   int is_overlapped = 0;
   size_t prev_mend = 0;
   size_t prev_prot = 0;
@@ -76,7 +85,7 @@ int main(int argc, char *argv[]) {
       if (!(prev_prot & PROT_WRITE))
         mprotect(cast(void *, prev_mend), overlapped, prev_prot | PROT_WRITE);
       lseek(fd, phdr->p_offset, SEEK_SET);
-      read(fd, cast(void *, phdr->p_vaddr), readsz);
+      read(fd, virt + phdr->p_vaddr, readsz);
       if (!(prev_prot & PROT_WRITE) && !(phdr->p_flags & PF_W))
         mprotect(cast(void *, prev_mend), overlapped, prev_prot);
       is_overlapped = 1;
