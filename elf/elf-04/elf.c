@@ -301,14 +301,14 @@ void _load_elf(const char *path, exeinfo_t *exe, int loading_ldso) {
 
   exe->virt = virt;
   exe->start = virt + ehdr->e_entry;
-  exe->dlstart = 0;
+  exe->dlstart = interp.start;
   exe->path = strdup(path);
-  exe->interp = 0;
+  // exe->interp;
   exe->a_phdr = cast(long, pmapself);
   exe->a_phent = ehdr->e_phentsize;
   exe->a_phnum = ehdr->e_phnum;
   exe->a_phnum = ehdr->e_phnum;
-  exe->a_base = 0;
+  exe->a_base = cast(long, interp.virt);
   exe->a_notelf = 0;
 }
 
