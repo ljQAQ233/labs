@@ -159,7 +159,8 @@ void *auxdup(long overlay[]) {
   return auxv;
 }
 
-void load_elf(const char *path, exeinfo_t *exe) {
+void _load_elf(const char *path, exeinfo_t *exe, int loading_ldso) {
+  printf(" load %s\n", path);
   int fd = open(path, O_RDONLY);
   assert(fd > 0);
 
@@ -192,8 +193,10 @@ void load_elf(const char *path, exeinfo_t *exe) {
       if (uptr > lp_max)
         lp_max = uptr;
     }
-    if (phdr->p_type == PT_INTERP)
-      assert(!"ldso not supported!!!");
+    if (phdr->p_type == PT_INTERP) {
+      if (loading_ldso)
+        assert(!"a ldso cannot require another interpreter!");
+    }
   }
   void *virt = 0;
   uintptr_t lp_size = lp_max - lp_min;
