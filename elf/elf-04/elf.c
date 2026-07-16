@@ -52,7 +52,7 @@ int aux_is_overlay(long key) {
 }
 
 void *build_frame(char *argv[], char *envp[], long *auxv) {
-  static char frame[1 << 14];
+  static char frame[1 << 18];
   void *sp = cast(void *, frame + sizeof(frame));
   int argc = 0, envc = 0;
 
@@ -279,7 +279,7 @@ int main(int argc, char *argv[]) {
     size_t end = align_up(off + ehdr->e_phentsize * ehdr->e_phnum, PAGE_SIZE);
     size_t sz = end - off;
     pmapself = mmap(NULL, sz, PROT_READ, MAP_PRIVATE, fd, off);
-    assert(!pmapself);
+    assert(pmapself != MAP_FAILED);
     printf("external AT_PHDR used = %p\n", pmapself);
   } else {
     printf("internal AT_PHDR used = %p\n", pmapself);
@@ -300,7 +300,7 @@ int main(int argc, char *argv[]) {
   void *sp = build_frame(argv + 1, environ, auxv);
   printf("start is at %p, sp = %p\n", start, sp);
 
-  munmap(base, len);
+  // munmap(base, len);
   fflush(stdout);
   asm volatile( //
       "mov %1, %%rsp\n"
