@@ -312,6 +312,11 @@ void _load_elf(const char *path, exeinfo_t *exe, int loading_ldso) {
   exe->a_notelf = 0;
 }
 
+void load_elf(const char *path, exeinfo_t *exe)
+{
+  _load_elf(path, exe, 0);
+}
+
 int main(int argc, char *argv[]) {
   printf("initial_sp = %p\n", initial_sp);
   printf("  argc = %ld\n", *cast(long *, initial_sp));
@@ -348,7 +353,7 @@ int main(int argc, char *argv[]) {
   asm volatile( //
       "mov %1, %%rsp\n"
       "xor %%rdx, %%rdx\n"
-      "jmp *%0\n" ::"r"(exe.start),
+      "jmp *%0\n" ::"r"(start),
       "r"(sp)
       : "memory");
   __builtin_unreachable();
