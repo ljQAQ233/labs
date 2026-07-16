@@ -159,19 +159,8 @@ void *auxdup(long overlay[]) {
   return auxv;
 }
 
-int main(int argc, char *argv[]) {
-  printf("initial_sp = %p\n", initial_sp);
-  printf("  argc = %ld\n", *cast(long *, initial_sp));
-  printf("  prog = %s\n", *cast(char **, cast(long *, initial_sp) + 1));
-  {
-    initial_auxv = cast(long *, initial_sp);
-    initial_auxv += 1 + argc + 1; // jmp to envp
-    while (*initial_auxv++)
-      ;
-  }
-
-  assert(argc >= 2);
-  int fd = open(argv[1], O_RDONLY);
+void load_elf(const char *path, exeinfo_t *exe) {
+  int fd = open(path, O_RDONLY);
   assert(fd > 0);
 
   size_t len = lseek(fd, 0, SEEK_END);
@@ -299,7 +288,32 @@ int main(int argc, char *argv[]) {
     printf("internal AT_PHDR used = %p\n", pmapself);
   }
 
-  void *start = virt + ehdr->e_entry;
+  exe->virt = virt;
+  exe->start = virt + ehdr->e_entry;
+  exe->dlstart = 0;
+  exe->path = strdup(path);
+  exe->interp = 0;
+  exe->a_phdr = cast(long, pmapself);
+  exe->a_phent = ehdr->e_phentsize;
+  exe->a_phnum = ehdr->e_phnum;
+  exe->a_phnum = ehdr->e_phnum;
+  exe->a_base = 0;
+  exe->a_notelf = 0;
+}
+
+int main(int argc, char *argv[]) {
+  printf("initial_sp = %p\n", initial_sp);
+  printf("  argc = %ld\n", *cast(long *, initial_sp));
+  printf("  prog = %s\n", *cast(char **, cast(long *, initial_sp) + 1));
+  {
+    initial_auxv = cast(long *, initial_sp);
+    initial_auxv += 1 + argc + 1; // jmp to envp
+    while (*initial_auxv++)
+      ;
+  }
+
+  assert(argc >= 2);
+
   long auxv_ov[] = {
       [AT_PHDR] = cast(long, pmapself),
       [AT_PHENT] = ehdr->e_phentsize,
