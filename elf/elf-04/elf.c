@@ -182,6 +182,7 @@ void _load_elf(const char *path, exeinfo_t *exe, int loading_ldso) {
 
   intptr_t lp_max = 0;
   intptr_t lp_min = -1;
+  exeinfo_t interp = {0};
   void *phdrs = cast(Elf64_Phdr *, base + ehdr->e_phoff);
   for (int i = 0; i < ehdr->e_phnum; i++) {
     Elf64_Phdr *phdr = cast(Elf64_Phdr *, phdrs + i * ehdr->e_phentsize);
@@ -196,6 +197,10 @@ void _load_elf(const char *path, exeinfo_t *exe, int loading_ldso) {
     if (phdr->p_type == PT_INTERP) {
       if (loading_ldso)
         assert(!"a ldso cannot require another interpreter!");
+      char interp_path[phdr->p_filesz + 1];
+      // read out interpreter path -> null-terminated c string
+      assert((exe->interp = strdup(cast(char *, base + phdr->p_offset))));
+      printf("  interp is at %s!!!!!\n", (char *)base + phdr->p_offset);
     }
   }
   void *virt = 0;
@@ -290,6 +295,9 @@ void _load_elf(const char *path, exeinfo_t *exe, int loading_ldso) {
   } else {
     printf("internal AT_PHDR used = %p\n", pmapself);
   }
+  
+  if (exe->interp)
+    _load_elf(exe->interp, &interp, 1);
 
   exe->virt = virt;
   exe->start = virt + ehdr->e_entry;
