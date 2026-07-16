@@ -1,9 +1,10 @@
 CC = gcc
 
-ifeq ($(notdir $(CURDIR)),elf-03)
-ENTRY_FLAG = -Wl,-e,mystart
-else
+A = elf-03 elf-04
+ifeq ($(filter $(A),$(notdir $(CURDIR))),)
 ENTRY_FLAG =
+else
+ENTRY_FLAG = -Wl,-e,mystart
 endif
 
 all: elf.out static.out asm.out
@@ -21,6 +22,6 @@ asm-pie.out: ../asm.S
 	$(CC) $< -o $@ -static-pie -nostdlib -ffreestanding
 
 clean:
-	rm *.out
+	rm -f *.out
 
 .PHONY:all clean
