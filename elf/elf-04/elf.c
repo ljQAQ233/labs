@@ -313,27 +313,31 @@ int main(int argc, char *argv[]) {
   }
 
   assert(argc >= 2);
+  exeinfo_t exe = {0};
+  load_elf(argv[1], &exe);
 
   long auxv_ov[] = {
-      [AT_PHDR] = cast(long, pmapself),
-      [AT_PHENT] = ehdr->e_phentsize,
-      [AT_PHNUM] = ehdr->e_phnum,
+      [AT_PHDR] = exe.a_phdr, //
+      [AT_PHENT] = exe.a_phent,
+      [AT_PHNUM] = exe.a_phnum,
       [AT_FLAGS] = 0,
-      [AT_BASE] = cast(long, virt),
-      [AT_ENTRY] = cast(long, start),
+      [AT_BASE] = exe.a_base,
+      [AT_ENTRY] = cast(long, exe.start),
       [AT_NOTELF] = 0,
       [AT_EXECFN] = cast(long, argv[1]),
   };
   long *auxv = auxdup(auxv_ov);
   void *sp = build_frame(argv + 1, environ, auxv);
-  printf("start is at %p, sp = %p\n", start, sp);
+  printf("start is at %p, sp = %p\n", exe.start, sp);
+  printf("dlstart is at %p\n", exe.dlstart);
+  void *start = exe.dlstart ? exe.dlstart : exe.start;
 
   // munmap(base, len);
   fflush(stdout);
   asm volatile( //
       "mov %1, %%rsp\n"
       "xor %%rdx, %%rdx\n"
-      "jmp *%0\n" ::"r"(start),
+      "jmp *%0\n" ::"r"(exe.start),
       "r"(sp)
       : "memory");
   __builtin_unreachable();
