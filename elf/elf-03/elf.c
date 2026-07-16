@@ -36,6 +36,8 @@ void *build_frame(char *argv[], char *envp[], long *auxv) {
     argv_addr[i] = cast(unsigned long, sp);
   }
   sp = cast(void *, cast(unsigned long, sp) & ~15UL);
+  if (!((envc + argc) & 1))
+    sp -= N;
 
   int naux = 0;
   if (auxv) {
