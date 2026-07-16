@@ -17,6 +17,20 @@ extern char **environ;
 
 #define N sizeof(long)
 
+typedef struct
+{
+    void *virt;
+    void *start;
+    void *dlstart;
+    char *path;
+    char *interp;
+    long a_phdr;
+    long a_phent;
+    long a_phnum;
+    long a_base;
+    long a_notelf;
+} exeinfo_t;
+
 void *initial_sp;
 long *initial_auxv;
 
