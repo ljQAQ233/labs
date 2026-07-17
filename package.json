@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "@slidev/cli": "latest",
+    "@slidev/theme-seriph": "latest"
+  }
+}
