@@ -166,7 +166,7 @@ void _load_elf(const char *path, exeinfo_t *exe, int loading_ldso) {
 
   size_t len = lseek(fd, 0, SEEK_END);
   void *base = mmap(0, len, PROT_READ, MAP_PRIVATE, fd, 0);
-  assert(base != 0);
+  assert(base != MAP_FAILED);
 
   Elf64_Ehdr *ehdr = cast(Elf64_Ehdr *, base);
   assert(ehdr->e_ident[0] == ELFMAG0);
