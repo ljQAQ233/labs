@@ -13,7 +13,7 @@ extern char **environ;
 #define PAGE_SIZE sysconf(_SC_PAGESIZE)
 #define cast(t, p) ((t)(p))
 #define align_up(x, a) (((x) + (a) - 1) & ~((a) - 1))
-#define align_dn(x, y) ((y) * (x / y))
+#define align_dn(x, y) ((y) * ((x) / (y)))
 
 #define N sizeof(long)
 
@@ -162,7 +162,7 @@ void *auxdup(long overlay[]) {
 void _load_elf(const char *path, exeinfo_t *exe, int loading_ldso) {
   printf(" load %s\n", path);
   int fd = open(path, O_RDONLY);
-  assert(fd > 0);
+  assert(fd >= 0);
 
   size_t len = lseek(fd, 0, SEEK_END);
   void *base = mmap(0, len, PROT_READ, MAP_PRIVATE, fd, 0);
